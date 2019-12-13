@@ -17,7 +17,6 @@ class User(db.Model):
         h = hashlib.new('sha256')
         h.update(password.encode('utf-8'))
         self.password = h.hexdigest()
-
     @classmethod
     def authenticate(cls, **kwargs):
         login = kwargs.get('login')

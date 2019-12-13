@@ -18,7 +18,10 @@ def say_hello(name):
 def register():
     data = request.get_json()
     if data==None:
-        return jsonify({'status':False}), 201
+        return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 201
+    users = User.query.filter_by(login=data['login']).all()
+    if(len(users)!=0):
+        return jsonify({'status':False,'msg':'Логин занят'}), 201
     user = User(**data)
     db.session.add(user)
     db.session.commit()
