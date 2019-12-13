@@ -1,6 +1,5 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-import hashlib
 
 db = SQLAlchemy()
 
@@ -14,9 +13,7 @@ class User(db.Model):
 
     def __init__(self, login, password):
         self.login = login
-        h = hashlib.new('sha256')
-        h.update(password.encode('utf-8'))
-        self.password = h.hexdigest()
+        self.password = generate_password_hash(password, method='sha256')
 
     @classmethod
     def authenticate(cls, **kwargs):
