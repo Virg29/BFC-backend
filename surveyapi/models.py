@@ -3,7 +3,16 @@ from flask_sqlalchemy import SQLAlchemy
 import hashlib
 
 db = SQLAlchemy()
-
+def check_password_hash(password1,password2):
+    h = hashlib.new('sha256')
+    h.update(password2.encode('utf-8'))
+    if(h.hexdigest()==password1):
+        return(True)
+    return(False)
+def create_password_hash(password):
+    h = hashlib.new('sha256')
+    h.update(password.encode('utf-8'))
+    return(h.hexdigest())
 class User(db.Model):
     __tablename__ = 'users'
 
@@ -14,19 +23,17 @@ class User(db.Model):
 
     def __init__(self, login, password):
         self.login = login
-        h = hashlib.new('sha256')
-        h.update(password.encode('utf-8'))
-        self.password = h.hexdigest()
+        self.password = create_password_hash(password)
     @classmethod
     def authenticate(cls, **kwargs):
         login = kwargs.get('login')
         password = kwargs.get('password')
         
-        if not email or not password:
-            return None
+        if not login or not password:
+            return False
 
         user = cls.query.filter_by(login=login).first()
         if not user or not check_password_hash(user.password, password):
-            return None
+            return False
 
         return user
