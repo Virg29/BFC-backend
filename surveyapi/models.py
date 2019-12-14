@@ -19,7 +19,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     login = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    
+    logged = db.Column(db.BOOLEAN,default=True)
 
     def __init__(self, login, password):
         self.login = login

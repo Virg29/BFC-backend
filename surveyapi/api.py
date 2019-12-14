@@ -13,7 +13,7 @@ def token_required(f):
     @wraps(f)
     def _verify(*args, **kwargs):
         auth_headers = request.headers.get('Authorization', '')
-        print(auth_headers)
+        #print(auth_headers)
         invalid_msg = {
             'message': 'Invalid token. Registeration and / or authentication required',
             'authenticated': False
@@ -26,12 +26,13 @@ def token_required(f):
         try:
             token = auth_headers
             data = jwt.decode(token, current_app.config['SECRET_KEY'],algorithms=['HS256'])
-            user = User.query.filter_by(login=data['sub']).first()
+            print(data)
+            user = User.query.filter_by(login=data['sub']).filter_by(logged=True).first()
             if not user:
-                return jsonify({ 'message': 'Invalid credentials', 'status': False }), 401
+                return jsonify({ 'message': 'Invalid credentials', 'status': False }), 200
             return f(user, *args, **kwargs)
         except jwt.ExpiredSignatureError:
-            return jsonify(expired_msg), 401 # 401 is Unauthorized HTTP status code
+            return jsonify(expired_msg), 200 # 401 is Unauthorized HTTP status code
         except (jwt.InvalidTokenError, Exception) as e:
             print(e)
             return jsonify(invalid_msg), 401
@@ -47,12 +48,12 @@ def register():
     data = request.get_json()
     print(data)
     if(data=="{}"):
-        return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 201
+        return jsonify({'status':False,'message':'Неправильные параметры POST запроса'}), 200
     if data==None:
-        return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 201
+        return jsonify({'status':False,'message':'Неправильные параметры POST запроса'}), 200
     users = User.query.filter_by(login=data['login']).all()
     if(len(users)!=0):
-        return jsonify({'status':False,'msg':'Логин занят'}), 201
+        return jsonify({'status':False,'message':'Логин занят'}), 200
     user = User(**data)
     db.session.add(user)
     db.session.commit()
@@ -67,13 +68,14 @@ def register():
 def login():
     data = request.get_json()
     if data==None:
-        return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 201
+        return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 200
 
     user = User.authenticate(**data)
 
     if not user:
-        return jsonify({ 'message': 'Логин и/или пароль неверные', 'status': False }), 401
-
+        return jsonify({ 'message': 'Логин и/или пароль неверные', 'status': False }), 200
+    user.logged=True
+    db.session.commit()
     token = jwt.encode({
         'sub': user.login,
         'iat':datetime.utcnow(),
@@ -86,30 +88,45 @@ def login():
 def test(user):
     return(user.login)
 
+@api.route('/auth/logout', methods=['POST'])
+@token_required
+def logout(user):
+    user.logged=False
+    db.session.commit()
+    return jsonify({'status':True,'message':'logouted'})
+
 @api.route('/newpost', methods=['POST'])
 @token_required
 def newpost(user):
     data = request.get_json()
-    data['tags']=data['tags'].split('#')
     user = Post(**data)
-    return jsonify({'status':True}), 201
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'status':True}), 200
 
-@api.route('/newpost',methods=['GET'])
-def viewpost(user):
+@api.route('/getposts',methods=['GET'])
+def viewposts(user):
     filterdb = request.args.get('filter')
     count = request.args.get('count')
     offset = request.args.get('offset')
-    tags = request.args.get('tags').split('#')
+    if(filterdb=="tags"):
+        tags = request.args.get('tags').split('#')
     if(filterdb=="newest"):
         resp=Post.query.order_by(Post.id.desc()).offset(offset).limit(count).all()
     elif(filterdb=="oldest"):
         resp=Post.query.offset(offset).limit(count).all()
 
+@api.route('/post',methods=['GET'])
+def getpost():
+    postid = request.args.get('id')
+    Post.query.filter_by(id=postid).first()
+
+
 @api.after_request
 def creds(response):
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
-    response.headers['Access-Control-Allow-Headers'] = 'Set-Cookie'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, authorization'
     response.headers['Access-Control-Expose-Headers'] = 'Cookie'
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
     return response
