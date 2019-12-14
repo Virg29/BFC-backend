@@ -2,7 +2,7 @@ from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 
 from surveyapi.application import create_app
-from surveyapi.models import db, User
+from surveyapi.models import db, User, Post
 
 app = create_app()
 

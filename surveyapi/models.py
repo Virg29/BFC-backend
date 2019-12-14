@@ -36,3 +36,16 @@ class User(db.Model):
             return False
         user = user[0]
         return user
+class Post(db.Model):
+    __tablename__='posts'
+
+    id=db.Column(db.Integer,primary_key=True)
+    fromuser=db.Column(db.Integer,nullable=False)
+    title=db.Column(db.String(150),nullable=False)
+    price=db.Column(db.Integer,nullable=False)
+    alreadyhave=db.Column(db.Integer, default=0)
+    latc=db.Column(db.String(20),nullable=False)
+    longc=db.Column(db.String(20),nullable=False)
+    files=db.Column(db.String(500),nullable=False)
+    addres=db.Column(db.String(150),nullable=False)
+    tags=db.Column(db.String(150),default="")

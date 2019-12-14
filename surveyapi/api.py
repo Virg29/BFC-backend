@@ -1,15 +1,14 @@
 from functools import wraps
 from datetime import datetime, timedelta
 import os
-
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, redirect, url_for
+from flask_cors import CORS, cross_origin
 
 import jwt
 
-from .models import db, User
+from .models import db, User, Post
 
 api = Blueprint('api', __name__)
-
 def token_required(f):
     @wraps(f)
     def _verify(*args, **kwargs):
@@ -41,11 +40,14 @@ def token_required(f):
 
 @api.route('/hello')
 def say_hello():
-    return('1')
+    return 'a'
 
 @api.route('/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
+    print(data)
+    if(data=="{}"):
+        return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 201
     if data==None:
         return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 201
     users = User.query.filter_by(login=data['login']).all()
@@ -54,7 +56,12 @@ def register():
     user = User(**data)
     db.session.add(user)
     db.session.commit()
-    return jsonify({'status':True}), 201
+    token = jwt.encode({
+        'sub': user.login,
+        'iat':datetime.utcnow(),
+        'exp': datetime.utcnow() + timedelta(minutes=30)},
+        current_app.config['SECRET_KEY'])
+    return jsonify({ 'token': token.decode('UTF-8'),'status':True })
 
 @api.route('/auth/login', methods=['POST'])
 def login():
@@ -71,8 +78,8 @@ def login():
         'sub': user.login,
         'iat':datetime.utcnow(),
         'exp': datetime.utcnow() + timedelta(minutes=30)},
-        current_app.config['SECRET_KEY'],algorithms=['HS256'])
-    return jsonify({ 'token': token.decode('UTF-8') })
+        current_app.config['SECRET_KEY'])
+    return jsonify({ 'token': token.decode('UTF-8'),'status':True })
 
 @api.route('/auth/test', methods=['POST'])
 @token_required
@@ -82,8 +89,27 @@ def test(user):
 @api.route('/newpost', methods=['POST'])
 @token_required
 def newpost(user):
-    pass
+    data = request.get_json()
+    data['tags']=data['tags'].split('#')
+    user = Post(**data)
+    return jsonify({'status':True}), 201
 
+@api.route('/newpost',methods=['GET'])
+def viewpost(user):
+    filterdb = request.args.get('filter')
+    count = request.args.get('count')
+    offset = request.args.get('offset')
+    tags = request.args.get('tags').split('#')
+    if(filterdb=="newest"):
+        resp=Post.query.order_by(Post.id.desc()).offset(offset).limit(count).all()
+    elif(filterdb=="oldest"):
+        resp=Post.query.offset(offset).limit(count).all()
 
+@api.after_request
+def creds(response):
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
+    response.headers['Access-Control-Allow-Headers'] = 'content-type'
+    return response
 
 
