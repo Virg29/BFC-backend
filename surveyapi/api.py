@@ -109,7 +109,9 @@ def viewpost(user):
 def creds(response):
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
-    response.headers['Access-Control-Allow-Headers'] = 'content-type'
+    response.headers['Access-Control-Allow-Headers'] = 'Set-Cookie'
+    response.headers['Access-Control-Expose-Headers'] = 'Cookie'
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
     return response
 
 
