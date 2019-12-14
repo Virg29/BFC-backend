@@ -1,33 +1,42 @@
 from functools import wraps
 from datetime import datetime, timedelta
 import os
+from werkzeug.utils import secure_filename
 from flask import Blueprint, jsonify, request, current_app, redirect, url_for
 from flask_cors import CORS, cross_origin
-
+import hashlib
 import jwt
 
 from .models import db, User, Post
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in current_app.config['ALLOWED_EXTENSIONS']
+
+
 api = Blueprint('api', __name__)
+
 def token_required(f):
     @wraps(f)
     def _verify(*args, **kwargs):
         auth_headers = request.headers.get('Authorization', '')
-        #print(auth_headers)
+        print(auth_headers)
         invalid_msg = {
-            'message': 'Invalid token. Registeration and / or authentication required',
-            'authenticated': False
+            'message': 'Неправильный токен',
+            'status': False
         }
         expired_msg = {
-            'message': 'Expired token. Reauthentication required.',
-            'authenticated': False
+            'message': 'Недействительный токен',
+            'status': False
         }
-
+        if(len(auth_headers)<10):
+            return invalid_msg
         try:
             token = auth_headers
             data = jwt.decode(token, current_app.config['SECRET_KEY'],algorithms=['HS256'])
             print(data)
             user = User.query.filter_by(login=data['sub']).filter_by(logged=True).first()
+            print(user.login)
             if not user:
                 return jsonify({ 'message': 'Invalid credentials', 'status': False }), 200
             return f(user, *args, **kwargs)
@@ -41,7 +50,7 @@ def token_required(f):
 
 @api.route('/hello')
 def say_hello():
-    return 'a'
+    return 'пососи' 
 
 @api.route('/auth/register', methods=['POST'])
 def register():
@@ -95,14 +104,32 @@ def logout(user):
     db.session.commit()
     return jsonify({'status':True,'message':'logouted'})
 
-@api.route('/newpost', methods=['POST'])
+@api.route('/new/generate_new', methods=['POST'])
 @token_required
-def newpost(user):
-    data = request.get_json()
-    user = Post(**data)
-    db.session.add(user)
+def generate_new(user):
+    data = {'fromuser':user.login}
+    post = Post(**data)
+    db.session.add(post)
     db.session.commit()
+    return jsonify({'status':True,'id':post.id}), 200
+
+@api.route('/new/loadImages', methods=['POST'])
+@token_required
+def loadImages(user):
+    postid = request.headers.get('room-Allow', '')
+    file = request.files['file']
+    print(postid+'         1')
+    print(str(file)+'         2')
+    if file and allowed_file(file.filename):
+        ext=file.filename.rsplit('.',1)[1]
+        filename = hashlib.md5(file.read()).hexdigest()
+        filename+="."+ext
+        file.save(current_app.config['UPLOAD_FOLDER']+'/'+filename)
+        chosenpost=Post.query.filter_by(id=postid).first()
+        chosenpost.files+=filename+";"
+        db.session.commit()
     return jsonify({'status':True}), 200
+
 
 @api.route('/getposts',methods=['GET'])
 def viewposts(user):
@@ -126,7 +153,7 @@ def getpost():
 def creds(response):
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, authorization'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, authorization, cache-control, room-Allow, x-requested-with'
     response.headers['Access-Control-Expose-Headers'] = 'Cookie'
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
     return response

@@ -5,4 +5,5 @@ class BaseConfig(object):
     # used for encryption and session management
     SECRET_KEY = 'kakoyzheyaaxyenniy'
     UPLOAD_FOLDER = './uploads/'
-	#ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+    ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+    UPLOADED_FILES_DEST = './uploads'
