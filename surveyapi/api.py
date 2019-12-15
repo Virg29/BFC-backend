@@ -159,6 +159,7 @@ def loadJson(user):
     q.price=data['total']
     q.latc=data['coord'][0]
     q.longc=data['coord'][1]
+    q.visibility=True
     q.prim=hashlib.md5(str(datetime.utcnow()).encode('UTF-8')).hexdigest()
     tagstemp=""
     for i in data['tags']:

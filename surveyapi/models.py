@@ -51,6 +51,7 @@ class Post(db.Model):
     tags=db.Column(db.String(1000),default="")
     article=db.Column(db.String(1500),default="")
     desc=db.Column(db.String(100),default="")
+    visibility=db.Column(db.BOOLEAN,default=False)
     def to_dict(self):
       return dict(id=self.id,
                   fromuser=self.fromuser,
@@ -63,7 +64,8 @@ class Post(db.Model):
                   addres=self.addres,
                   tags=self.tags.split('#')[1:],
                   article=self.article,
-                  desc=self.desc)
+                  desc=self.desc,
+                  visibility=self.visibility)
     def to_dict2(self):
       return dict(id=self.id,
                   fromuser=self.fromuser,
@@ -72,7 +74,8 @@ class Post(db.Model):
                   price=self.price,
                   alreadyhave=self.alreadyhave,
                   files=self.files.split(';')[:-1],
-                  desc=self.desc)
+                  desc=self.desc,
+                  visibility=self.visibility)
 
 class Tags(db.Model):
     __tablename__='tag'
