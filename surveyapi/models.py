@@ -49,3 +49,4 @@ class Post(db.Model):
     files=db.Column(db.String(1000),default="")
     addres=db.Column(db.String(150),default="")
     tags=db.Column(db.String(150),default="")
+    article=db.Column(db.String(1500),default="")

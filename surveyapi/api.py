@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request, current_app, redirect, url_for
 from flask_cors import CORS, cross_origin
 import hashlib
 import jwt
+import copy
 
 from .models import db, User, Post
 
@@ -78,7 +79,6 @@ def login():
     data = request.get_json()
     if data==None:
         return jsonify({'status':False,'msg':'Неправильные параметры POST запроса'}), 200
-
     user = User.authenticate(**data)
 
     if not user:
@@ -118,18 +118,33 @@ def generate_new(user):
 def loadImages(user):
     postid = request.headers.get('room-Allow', '')
     file = request.files['file']
-    print(postid+'         1')
-    print(str(file)+'         2')
     if file and allowed_file(file.filename):
         ext=file.filename.rsplit('.',1)[1]
-        filename = hashlib.md5(file.read()).hexdigest()
-        filename+="."+ext
-        file.save(current_app.config['UPLOAD_FOLDER']+'/'+filename)
+        hashedTime=hashlib.md5(str(datetime.utcnow()).encode('UTF-8')).hexdigest()+'.'+ext
+        request.files['file'].save(current_app.config['UPLOAD_FOLDER']+'/'+hashedTime)
         chosenpost=Post.query.filter_by(id=postid).first()
-        chosenpost.files+=filename+";"
+        chosenpost.files+=hashedTime+";"
         db.session.commit()
-    return jsonify({'status':True}), 200
+        return("")
 
+
+
+@api.route('/new/loadJson', methods=['POST'])
+@token_required
+def loadJson(user):
+    data = request.get_json()
+    postid = data['id']
+    q=Post.query.filter_by(id=postid).filter_by(fromuser=user.login).first()
+    if not q:
+        return(jsonify({'status':False}))
+    q.title=data['title']
+    q.price=data['price']
+    q.latc=data['latc']
+    q.longc=data['longc']
+    print(data['tags'])
+    q.tags=data['tags']
+    q.article=data['article']
+    db.session.commit()
 
 @api.route('/getposts',methods=['GET'])
 def viewposts(user):
@@ -152,7 +167,7 @@ def getpost():
 @api.after_request
 def creds(response):
     response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8080'
+    response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, authorization, cache-control, room-Allow, x-requested-with'
     response.headers['Access-Control-Expose-Headers'] = 'Cookie'
     response.headers['Content-Type'] = 'application/json; charset=utf-8'
