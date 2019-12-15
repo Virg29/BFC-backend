@@ -150,6 +150,7 @@ def loadJson(user):
     q.price=data['total']
     q.latc=data['coord'][0]
     q.longc=data['coord'][1]
+    q.prim=hashlib.md5(str(datetime.utcnow()).encode('UTF-8')).hexdigest()
     tagstemp=""
     for i in data['tags']:
         tagstemp+="#"+i
@@ -159,18 +160,31 @@ def loadJson(user):
     db.session.commit()
     return "соси"
 
-@api.route('/getposts',methods=['GET'])
-def viewposts(user):
-    filterdb = request.args.get('filter')
-    count = request.args.get('count')
-    offset = request.args.get('offset')
+@api.route('/getposts',methods=['POST'])
+def viewposts():
+    data = request.get_json()
+    print(data)
+    filterdb = data['filter']
+    #count = data['count']
+    #offset = data['offset']
+    tags = data['tags']
+    print(request.args)
     if(filterdb=="tags"):
-        tags = request.args.get('tags').split('#')
-    if(filterdb=="newest"):
+        resp=[]
+        q = Post.query.all()
+        for i in tags:
+            print(i)
+            for j in q:
+                if(i in j.tags.split('#')[1:]):
+                    resp.append(j.to_dict())
+                    q.remove(j)
+
+
+    elif(filterdb==None):
         resp=Post.query.order_by(Post.id.desc()).offset(offset).limit(count).all()
     elif(filterdb=="oldest"):
         resp=Post.query.offset(offset).limit(count).all()
-
+    return(jsonify(resp))
 @api.route('/post',methods=['GET'])
 def getpost():
     postid = request.args.get('id')

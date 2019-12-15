@@ -38,8 +38,8 @@ class User(db.Model):
         return user
 class Post(db.Model):
     __tablename__='posts'
-
     id=db.Column(db.Integer,primary_key=True)
+    prim=db.Column(db.String(150),default="")
     fromuser=db.Column(db.String(150),nullable=False)
     title=db.Column(db.String(50),default="")
     price=db.Column(db.Integer,default="")
@@ -51,3 +51,16 @@ class Post(db.Model):
     tags=db.Column(db.String(1000),default="")
     article=db.Column(db.String(1500),default="")
     desc=db.Column(db.String(100),default="")
+    def to_dict(self):
+      return dict(id=self.id,
+                  fromuser=self.fromuser,
+                  prim=self.prim,
+                  title=self.title,
+                  price=self.price,
+                  alreadyhave=self.alreadyhave,
+                  coords=[self.latc,self.longc],
+                  files=self.files.split(';')[:-1],
+                  addres=self.addres,
+                  tags=self.tags.split('#')[1:],
+                  article=self.article,
+                  desc=self.desc)
