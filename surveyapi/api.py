@@ -8,7 +8,7 @@ import hashlib
 import jwt
 import copy
 
-from .models import db, User, Post
+from .models import db, User, Post ,Tags
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -153,42 +153,48 @@ def loadJson(user):
     q.prim=hashlib.md5(str(datetime.utcnow()).encode('UTF-8')).hexdigest()
     tagstemp=""
     for i in data['tags']:
+        newtag=Tags(tag=i)
+        db.session.add(newtag)
         tagstemp+="#"+i
     q.tags=tagstemp
     q.article=data['article']
     q.desc=data['desc']
     db.session.commit()
-    return "соси"
+    return ""
 
 @api.route('/getposts',methods=['POST'])
 def viewposts():
     data = request.get_json()
     print(data)
     filterdb = data['filter']
-    #count = data['count']
     #offset = data['offset']
-    tags = data['tags']
-    print(request.args)
+    offset = 6
+    resp=[]
     if(filterdb=="tags"):
-        resp=[]
+        tags = data['tags']
         q = Post.query.all()
         for i in tags:
             print(i)
             for j in q:
                 if(i in j.tags.split('#')[1:]):
-                    resp.append(j.to_dict())
+                    resp.append(j.to_dict2())
                     q.remove(j)
 
 
-    elif(filterdb==None):
-        resp=Post.query.order_by(Post.id.desc()).offset(offset).limit(count).all()
-    elif(filterdb=="oldest"):
-        resp=Post.query.offset(offset).limit(count).all()
+    elif(filterdb=="near"):
+        page = data['page']
+        coord = data['coord']
+        for j in Post.query.order_by(Post.id.desc()).filter(abs(Post.latc-coord[0])<0.01 and abs(Post.longc-coord[1])<0.01).all():
+            resp.append(j.to_dict2())
+    elif(filterdb=="all"):
+        page = data['page']
+        for j in Post.query.order_by(Post.id.desc()).offset(offset*page).limit(offset).all():
+            resp.append(j.to_dict2())
     return(jsonify(resp))
 @api.route('/post',methods=['GET'])
 def getpost():
     postid = request.args.get('id')
-    Post.query.filter_by(id=postid).first()
+    Post.query.filter_by(id=postid).first(abs())
 
 
 @api.after_request

@@ -64,3 +64,17 @@ class Post(db.Model):
                   tags=self.tags.split('#')[1:],
                   article=self.article,
                   desc=self.desc)
+    def to_dict2(self):
+      return dict(id=self.id,
+                  fromuser=self.fromuser,
+                  prim=self.prim,
+                  title=self.title,
+                  price=self.price,
+                  alreadyhave=self.alreadyhave,
+                  files=self.files.split(';')[:-1],
+                  desc=self.desc)
+
+class Tags(db.Model):
+    __tablename__='tag'
+    id=db.Column(db.Integer,primary_key=True)
+    tag=db.Column(db.String(150),nullable=False)
