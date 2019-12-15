@@ -78,3 +78,6 @@ class Tags(db.Model):
     __tablename__='tag'
     id=db.Column(db.Integer,primary_key=True)
     tag=db.Column(db.String(150),nullable=False)
+    def to_dict(self):
+      return dict(id=self.id,
+                  tag=self.tag)

@@ -2,7 +2,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import os
 from werkzeug.utils import secure_filename
-from flask import Blueprint, jsonify, request, current_app, redirect, url_for
+from flask import Blueprint, jsonify, request, current_app, redirect, url_for, send_from_directory
 from flask_cors import CORS, cross_origin
 import hashlib
 import jwt
@@ -16,6 +16,10 @@ def allowed_file(filename):
 
 
 api = Blueprint('api', __name__)
+
+@api.route('/uploads/<path:filename>')
+def download_file(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'],filename,as_attachment=True)
 
 def token_required(f):
     @wraps(f)
@@ -49,9 +53,14 @@ def token_required(f):
 
     return _verify
 
-@api.route('/hello')
+@api.route('/tags')
 def say_hello():
-    return 'пососи' 
+    resp=[]
+    for i in Tags.query.all():
+        resp.append(i.to_dict())
+    return(jsonify(resp))
+
+
 
 @api.route('/auth/register', methods=['POST'])
 def register():
@@ -165,36 +174,35 @@ def loadJson(user):
 @api.route('/getposts',methods=['POST'])
 def viewposts():
     data = request.get_json()
-    print(data)
-    filterdb = data['filter']
+    
     #offset = data['offset']
-    offset = 6
+    offset = 3
     resp=[]
-    if(filterdb=="tags"):
-        tags = data['tags']
-        q = Post.query.all()
-        for i in tags:
-            print(i)
+    q = Post.query.all()
+    for k in data:
+        if(k=="tags"):
+            tags = data['tags']
+            for i in tags:
+                print(i)
+                for j in q:
+                    if(i in j.tags.split('#')[1:]):
+                        resp.append(j.to_dict2())
+                        q.remove(j)
+        if(k=='coord'):
+            coord = data['coord']
             for j in q:
-                if(i in j.tags.split('#')[1:]):
+                if(abs(float(j.latc)-float(coord[0]))<0.1 and abs(float(j.longc)-float(coord[1]))<0.1):
                     resp.append(j.to_dict2())
                     q.remove(j)
-
-
-    elif(filterdb=="near"):
-        page = data['page']
-        coord = data['coord']
-        for j in Post.query.order_by(Post.id.desc()).filter(abs(Post.latc-coord[0])<0.01 and abs(Post.longc-coord[1])<0.01).all():
-            resp.append(j.to_dict2())
-    elif(filterdb=="all"):
-        page = data['page']
-        for j in Post.query.order_by(Post.id.desc()).offset(offset*page).limit(offset).all():
-            resp.append(j.to_dict2())
+        if(k=='page'):
+            page = data['page']
+            for j in Post.query.order_by(Post.id.desc()).offset(offset*page).limit(offset).all():
+                resp.append(j.to_dict2())
     return(jsonify(resp))
 @api.route('/post',methods=['GET'])
 def getpost():
     postid = request.args.get('id')
-    Post.query.filter_by(id=postid).first(abs())
+    return jsonify(Post.query.filter_by(id=postid).first().to_dict())
 
 
 @api.after_request
