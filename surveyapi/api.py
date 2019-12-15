@@ -129,22 +129,35 @@ def loadImages(user):
 
 
 
+@api.route('/new/removeRoom', methods=['DELETE'])
+@token_required
+def removeRoom(user):
+    data = request.get_json()
+    postid = data['id']
+    Post.query.filter(Post.id==postid).filter(Post.fromuser==user.login).delete()
+    db.session.commit()
+
 @api.route('/new/loadJson', methods=['POST'])
 @token_required
 def loadJson(user):
     data = request.get_json()
+    print(data)
     postid = data['id']
     q=Post.query.filter_by(id=postid).filter_by(fromuser=user.login).first()
     if not q:
         return(jsonify({'status':False}))
     q.title=data['title']
-    q.price=data['price']
-    q.latc=data['latc']
-    q.longc=data['longc']
-    print(data['tags'])
-    q.tags=data['tags']
+    q.price=data['total']
+    q.latc=data['coord'][0]
+    q.longc=data['coord'][1]
+    tagstemp=""
+    for i in data['tags']:
+        tagstemp+="#"+i
+    q.tags=tagstemp
     q.article=data['article']
+    q.desc=data['desc']
     db.session.commit()
+    return "соси"
 
 @api.route('/getposts',methods=['GET'])
 def viewposts(user):
